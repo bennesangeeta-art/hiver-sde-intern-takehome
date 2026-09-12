@@ -1,0 +1,29 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.pyo
+
+# Local/generated files
+project_files.txt
+fix_human_review.py
+
+# Raw dataset
+data/raw/*.zip
+data/raw/twcs/
+
+# Generated evaluation outputs
+reports/generated/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+# Virtual environment
+.venv/
