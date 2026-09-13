@@ -1,9 +1,10 @@
 import json
-import urllib.request
-import urllib.error
+import os
 from pathlib import Path
 
 import pandas as pd
+from dotenv import load_dotenv
+from openai import OpenAI
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -11,34 +12,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INPUT_FILE = PROJECT_ROOT / "reports" / "generated" / "judge_template.csv"
 OUTPUT_FILE = PROJECT_ROOT / "reports" / "generated" / "llm_judge_results.csv"
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "qwen3:8b"
+load_dotenv(PROJECT_ROOT / ".env")
 
+MODEL = os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
 
-def ask_ollama(prompt):
-    payload = {
-        "model": MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "format": "json",
-        "options": {
-            "temperature": 0
-        }
-    }
-
-    data = json.dumps(payload).encode("utf-8")
-
-    request = urllib.request.Request(
-        OLLAMA_URL,
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST"
-    )
-
-    with urllib.request.urlopen(request, timeout=180) as response:
-        result = json.loads(response.read().decode("utf-8"))
-
-    return result["response"]
+client = OpenAI()
 
 
 def build_prompt(row):
@@ -140,6 +118,7 @@ def validate_result(result):
             raise ValueError(f"Missing field: {field}")
 
     for field in required[:-1]:
+
         value = int(result[field])
 
         if value < 1 or value > 5:
@@ -154,18 +133,33 @@ def validate_result(result):
     return result
 
 
+def ask_openai(prompt):
+
+    response = client.responses.create(
+        model=MODEL,
+        input=prompt
+    )
+
+    text = response.output_text.strip()
+
+    return text
+
 def main():
 
     print("=" * 70)
-    print("OLLAMA LLM JUDGE")
+    print("OPENAI LLM JUDGE")
     print("=" * 70)
 
     if not INPUT_FILE.exists():
+
         raise FileNotFoundError(
             f"Input file not found: {INPUT_FILE}"
         )
 
-    df = pd.read_csv(INPUT_FILE, dtype=str).fillna("")
+    df = pd.read_csv(
+        INPUT_FILE,
+        dtype=str
+    ).fillna("")
 
     print(f"\nExamples to judge: {len(df)}")
     print(f"Model: {MODEL}")
@@ -183,13 +177,14 @@ def main():
 
             prompt = build_prompt(row)
 
-            raw_response = ask_ollama(prompt)
+            raw_response = ask_openai(prompt)
 
             result = json.loads(raw_response)
 
             result = validate_result(result)
 
             results.append({
+
                 "id": row["id"],
                 "tweet_id": row["tweet_id"],
                 "customer_message": row["customer_message"],
@@ -197,13 +192,27 @@ def main():
                 "predicted_intent": row["predicted_intent"],
                 "reply": row["reply"],
                 "decision": row["decision"],
-                "llm_correctness": result["correctness"],
-                "llm_groundedness": result["groundedness"],
-                "llm_helpfulness": result["helpfulness"],
-                "llm_tone": result["tone"],
-                "llm_overall": result["overall"],
-                "llm_reason": result["reason"],
-                "judge_model": MODEL
+
+                "llm_correctness":
+                    result["correctness"],
+
+                "llm_groundedness":
+                    result["groundedness"],
+
+                "llm_helpfulness":
+                    result["helpfulness"],
+
+                "llm_tone":
+                    result["tone"],
+
+                "llm_overall":
+                    result["overall"],
+
+                "llm_reason":
+                    result["reason"],
+
+                "judge_model":
+                    MODEL
             })
 
             print(
@@ -220,6 +229,7 @@ def main():
             print(f"ERROR: {error}")
 
             results.append({
+
                 "id": row["id"],
                 "tweet_id": row["tweet_id"],
                 "customer_message": row["customer_message"],
@@ -227,13 +237,18 @@ def main():
                 "predicted_intent": row["predicted_intent"],
                 "reply": row["reply"],
                 "decision": row["decision"],
+
                 "llm_correctness": "",
                 "llm_groundedness": "",
                 "llm_helpfulness": "",
                 "llm_tone": "",
                 "llm_overall": "",
-                "llm_reason": f"Judge error: {error}",
-                "judge_model": MODEL
+
+                "llm_reason":
+                    f"Judge error: {error}",
+
+                "judge_model":
+                    MODEL
             })
 
     output_df = pd.DataFrame(results)
@@ -249,17 +264,28 @@ def main():
         encoding="utf-8-sig"
     )
 
-    successful = output_df["llm_overall"].astype(str).str.match(
-        r"^[1-5]$"
-    ).sum()
+    successful = (
+        output_df["llm_overall"]
+        .astype(str)
+        .str.match(r"^[1-5]$")
+        .sum()
+    )
 
     print("\n" + "=" * 70)
     print("LLM JUDGE COMPLETED")
     print("=" * 70)
 
-    print(f"Total examples: {len(output_df)}")
-    print(f"Successfully judged: {successful}")
-    print(f"Saved to: {OUTPUT_FILE}")
+    print(
+        f"Total examples: {len(output_df)}"
+    )
+
+    print(
+        f"Successfully judged: {successful}"
+    )
+
+    print(
+        f"Saved to: {OUTPUT_FILE}"
+    )
 
 
 if __name__ == "__main__":

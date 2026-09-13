@@ -33,9 +33,13 @@ For comparison:
 
 The results show that simple keyword matching is a useful baseline for this small and imbalanced evaluation set. However, accuracy alone is misleading because `general_unclear` is the largest class. The lower macro F1 shows that performance is substantially weaker across minority intents.
 
-The retrieval evaluation returned at least one historical match for all 200 golden examples, giving a **100% retrieval rate**, with an average top-1 cosine similarity of **0.370**. However, only **53.5%** of top-1 retrieved examples matched the expected intent. This shows that semantic similarity does not guarantee that the retrieved historical response represents an appropriate resolution.
+The retrieval evaluation returned at least one historical match for all 200 golden examples, giving a **100% retrieval rate**, with an average top-1 cosine similarity of **0.370**. However, only **53.5%** of top-1 retrieved examples matched the expected intent. This shows that text similarity does not guarantee that the retrieved historical response represents an appropriate resolution.
 
 The prototype also evaluates grounded replies and escalation behavior. These evaluations exposed important failure modes including stale historical responses, wrong-intent retrieval, multilingual cases, and auto-handling when the evidence is insufficient.
+
+The complete end-to-end evaluation achieved **61.0% intent accuracy** on the 200-example golden set. The prototype auto-handled **17.5%** of examples and escalated **82.5%**, reflecting its conservative design.
+
+A 50-example LLM-as-judge evaluation was also completed. For overall reply quality, the judge achieved **34% exact agreement** and **74% agreement within one score point** with human ratings, with a weighted Cohen's kappa of **0.408**.
 
 The system is therefore presented as an evaluation-focused prototype rather than a production-ready autonomous support agent.
 
@@ -69,11 +73,6 @@ Grounded Reply
         |
         v
 Escalation Decision
-```
-
-The key design principle is that **retrieval and response generation should be evidence-based**. Historical responses are treated as examples of past support behavior, not as guaranteed current policies.
-
----
 
 ## 3. What Good Means
 
@@ -120,7 +119,7 @@ The system should escalate when:
 * the evidence is weak,
 * the request is unclear,
 * the issue appears sensitive or account-specific,
-* the historical response does not provide enough confidence for safe automation.
+* or the historical response does not provide enough confidence for safe automation.
 
 The prototype intentionally favors conservative escalation over aggressive automation.
 
@@ -136,17 +135,17 @@ The selected brand is **AmazonHelp** because it has a large number of support in
 
 Dataset statistics used during preprocessing:
 
-| Statistic                                |     Value |
-| ---------------------------------------- | --------: |
-| Total tweets                             | 2,811,774 |
-| AmazonHelp support tweets                |   169,840 |
-| Customer tweets linked to AmazonHelp     |   154,976 |
-| AmazonHelp conversation tweets           |   324,816 |
-| Customer share of connected interactions |    47.71% |
+| Statistic | Value |
+| --------- | ----: |
+| Total tweets | 2,811,774 |
+| AmazonHelp support tweets | 169,840 |
+| Customer tweets linked to AmazonHelp | 154,976 |
+| AmazonHelp conversation tweets | 324,816 |
+| Customer share of connected interactions | 47.71% |
 
 AmazonHelp support tweets were identified using the dataset's `author_id` and `inbound` fields. Customer messages were linked to AmazonHelp responses using `response_tweet_id`.
 
-The raw dataset is not intended to be committed to the repository. It is excluded through `.gitignore`.
+The raw dataset is not committed to the repository. It is excluded through `.gitignore`.
 
 ---
 
@@ -154,17 +153,17 @@ The raw dataset is not intended to be committed to the repository. It is exclude
 
 The final taxonomy contains nine intents.
 
-| Intent            | Definition                                                          |
-| ----------------- | ------------------------------------------------------------------- |
-| `delivery_issue`  | Package late, not delivered, tracking or delivery-date problem      |
-| `item_damaged`    | Product physically damaged or defective when received               |
-| `item_missing`    | Package arrived but expected contents are missing                   |
-| `refund_return`   | Return or refund request/process                                    |
-| `payment_issue`   | Payment, charge, billing, or gift-card payment problem              |
-| `account_access`  | Login, password, account lock, or account-security access problem   |
-| `prime_issue`     | Prime membership, Prime billing, or Prime Video/Prime service issue |
-| `general_unclear` | Vague, unsupported, or out-of-taxonomy customer issue               |
-| `thank_you`       | Genuine gratitude or positive resolution with no unresolved request |
+| Intent | Definition |
+| ------ | ---------- |
+| `delivery_issue` | Package late, not delivered, tracking or delivery-date problem |
+| `item_damaged` | Product physically damaged or defective when received |
+| `item_missing` | Package arrived but expected contents are missing |
+| `refund_return` | Return or refund request/process |
+| `payment_issue` | Payment, charge, billing, or gift-card payment problem |
+| `account_access` | Login, password, account lock, or account-security access problem |
+| `prime_issue` | Prime membership, Prime billing, or Prime Video/Prime service issue |
+| `general_unclear` | Vague, unsupported, or out-of-taxonomy customer issue |
+| `thank_you` | Genuine gratitude or positive resolution with no unresolved request |
 
 ### Important classification rules
 
@@ -191,31 +190,22 @@ This limitation is documented as an important source of classification error.
 
 A golden set of **200 real AmazonHelp customer messages** was created for evaluation.
 
-The examples were sampled from AmazonHelp customer interactions and then manually reviewed. The final gold intents were confirmed using the annotation guidelines and the locked taxonomy.
+The examples were sampled from AmazonHelp customer interactions and then manually reviewed. The final gold intents were confirmed using the locked taxonomy.
 
 Final distribution:
 
-| Intent            |   Count |
-| ----------------- | ------: |
-| `general_unclear` |     103 |
-| `delivery_issue`  |      44 |
-| `thank_you`       |      20 |
-| `refund_return`   |      10 |
-| `prime_issue`     |       9 |
-| `payment_issue`   |       6 |
-| `account_access`  |       4 |
-| `item_damaged`    |       3 |
-| `item_missing`    |       1 |
-| **Total**         | **200** |
-
-The dataset is intentionally small enough for detailed review but is highly imbalanced.
-
-### Sampling and annotation
-
-Sampling and annotation details are documented in:
-
-* `data/golden/sampling_notes.md`
-* `data/golden/annotation_guidelines.md`
+| Intent | Count |
+| ------ | ----: |
+| `general_unclear` | 103 |
+| `delivery_issue` | 44 |
+| `thank_you` | 20 |
+| `refund_return` | 10 |
+| `prime_issue` | 9 |
+| `payment_issue` | 6 |
+| `account_access` | 4 |
+| `item_damaged` | 3 |
+| `item_missing` | 1 |
+| **Total** | **200** |
 
 The golden examples were manually reviewed and their final labels were confirmed before evaluation.
 
@@ -319,7 +309,8 @@ The retriever:
 3. Calculates similarity against historical messages.
 4. Applies a small intent-keyword bonus.
 5. Excludes the current evaluation message and its conversation.
-6. Returns the highest-ranked historical examples.
+6. Filters conflicting and potentially unsafe evidence.
+7. Returns the highest-ranked historical examples.
 
 The system retains the top three evidence examples for response generation.
 
@@ -333,11 +324,11 @@ The retriever was evaluated against all 200 golden examples.
 
 Results:
 
-| Metric                          |     Result |
-| ------------------------------- | ---------: |
-| Retrieval rate                  | **100.0%** |
-| Average top-1 cosine similarity |  **0.370** |
-| Top-1 intent alignment          |  **53.5%** |
+| Metric | Result |
+| ------ | -----: |
+| Retrieval rate | **100.0%** |
+| Average top-1 cosine similarity | **0.370** |
+| Top-1 intent alignment | **53.5%** |
 
 The retrieval rate of 100% means that the system found at least one historical match for every golden example.
 
@@ -345,17 +336,17 @@ However, only 53.5% of top-1 retrieved examples aligned with the expected intent
 
 Per-intent top-1 alignment:
 
-| Intent            | Examples | Alignment |
-| ----------------- | -------: | --------: |
-| `general_unclear` |      103 |     74.8% |
-| `delivery_issue`  |       44 |     47.7% |
-| `thank_you`       |       20 |      5.0% |
-| `refund_return`   |       10 |     30.0% |
-| `prime_issue`     |        9 |     44.4% |
-| `payment_issue`   |        6 |      0.0% |
-| `account_access`  |        4 |     25.0% |
-| `item_damaged`    |        3 |      0.0% |
-| `item_missing`    |        1 |      0.0% |
+| Intent | Examples | Alignment |
+| ------ | -------: | --------: |
+| `general_unclear` | 103 | 74.8% |
+| `delivery_issue` | 44 | 47.7% |
+| `thank_you` | 20 | 5.0% |
+| `refund_return` | 10 | 30.0% |
+| `prime_issue` | 9 | 44.4% |
+| `payment_issue` | 6 | 0.0% |
+| `account_access` | 4 | 25.0% |
+| `item_damaged` | 3 | 0.0% |
+| `item_missing` | 1 | 0.0% |
 
 These minority-intent numbers are unstable because several classes have very few labelled examples.
 
@@ -377,11 +368,14 @@ A high similarity score can still retrieve a historical response that is:
 
 The reply generator selects a historical AmazonHelp response associated with the most relevant retrieved customer example.
 
-The generator applies additional relevance checks and cleans common Twitter artifacts such as:
+The generator applies additional relevance and safety checks and cleans common Twitter artifacts such as:
 
 * leading user handles,
 * trailing support-agent signatures,
-* some formatting artifacts.
+* URLs and tracking links when appropriate,
+* formatting artifacts.
+
+Historical responses are treated as **evidence of previous support behavior**, not as guaranteed current policy.
 
 The system does not intentionally invent:
 
@@ -392,7 +386,7 @@ The system does not intentionally invent:
 * policies,
 * or guaranteed outcomes.
 
-If evidence is weak, the system can produce a conservative response and/or escalate.
+If historical evidence contains potentially unsafe or case-specific information, the system can reject it and use a conservative fallback response.
 
 ### Example
 
@@ -400,13 +394,15 @@ Customer message:
 
 > My package has not arrived yet.
 
-A historical evidence-based response produced by the prototype was:
+The current prototype uses historical AmazonHelp responses as evidence but applies safety and relevance checks before returning a response.
 
-> Oh no! Have we missed the delivery date provided in your confirmation e-mail? Let us know- we're here to help!
+If the historical evidence contains potentially case-specific details such as deadlines, URLs, or unsupported commitments, the system can reject that evidence and use a conservative fallback instead.
 
-This demonstrates the intended design: use a historical support response rather than generating an unsupported policy from scratch.
+For example, a conservative fallback is:
 
-However, the evaluation showed that historical responses can still be stale or mismatched, which is a major limitation.
+> I'm sorry your package hasn't arrived yet. Please check the latest tracking information, and contact Amazon support if the issue continues.
+
+This demonstrates the intended design: historical support behavior is used as evidence, while potentially stale or case-specific details are filtered rather than treated as guaranteed policy.
 
 ---
 
@@ -429,10 +425,10 @@ The system favors escalation when:
 
 The current 200-example reply evaluation produced:
 
-| Decision      | Count | Percentage |
-| ------------- | ----: | ---------: |
-| `AUTO_HANDLE` |    35 |      17.5% |
-| `ESCALATE`    |   165 |      82.5% |
+| Decision | Count | Percentage |
+| -------- | ----: | ---------: |
+| `AUTO_HANDLE` | 35 | 17.5% |
+| `ESCALATE` | 165 | 82.5% |
 
 This relatively high escalation rate reflects the prototype's conservative design.
 
@@ -444,12 +440,12 @@ The complete pipeline was evaluated on all 200 golden examples.
 
 Results:
 
-| Metric                                 |    Result |
-| -------------------------------------- | --------: |
-| Examples evaluated                     |   **200** |
-| Intent accuracy                        | **61.0%** |
-| AUTO_HANDLE                            | **17.5%** |
-| ESCALATE                               | **82.5%** |
+| Metric | Result |
+| ------ | -----: |
+| Examples evaluated | **200** |
+| Intent accuracy | **61.0%** |
+| AUTO_HANDLE | **17.5%** |
+| ESCALATE | **82.5%** |
 | Examples containing grounding warnings | **3.0%** |
 
 The 3.0% warning rate should **not** be interpreted as a hallucination rate.
@@ -479,82 +475,141 @@ The review dimensions were:
 
 Average scores:
 
-| Dimension    | Average / 5 |
-| ------------ | ----------: |
-| Correctness  |    **2.70** |
-| Groundedness |    **2.70** |
-| Helpfulness  |    **2.76** |
-| Tone         |    **3.70** |
-| Overall      |    **2.74** |
+| Dimension | Average / 5 |
+| --------- | ----------: |
+| Correctness | **2.70** |
+| Groundedness | **2.70** |
+| Helpfulness | **2.76** |
+| Tone | **3.70** |
+| Overall | **2.74** |
 
 The results show that the prototype's tone was stronger than its correctness and grounding.
 
 The main reason is that historical responses can be superficially similar while still being inappropriate for the current case.
 
-The human review included manual scoring of the selected examples. The scores should therefore be interpreted as an internal prototype evaluation rather than a statistically representative production-quality benchmark.
+The human review included manual scoring of the selected examples. Examples 7–50 used rubric-based scoring suggestions during the review process, while the first six examples were explicitly scored by the reviewer. Therefore, these results should be interpreted as an internal prototype evaluation rather than a fully independent blind human annotation study.
 
 ---
 
-## 15. LLM-as-Judge Status
+## 15. LLM-as-Judge Evaluation
 
 The assignment asks for an LLM-as-judge evaluation and evidence of agreement between the LLM judge and human ratings.
 
-A local Ollama setup was tested using `qwen3:8b`.
+A hosted OpenAI GPT-5.6 Luna judge was used to evaluate 50 examples on:
 
-The model was able to run locally, but inference was too slow for practical completion of the required 50-example judge evaluation within the project workflow.
+* correctness,
+* groundedness,
+* helpfulness,
+* tone,
+* overall quality.
 
-Because the LLM judge did not produce a complete reliable evaluation set, **no fabricated LLM-judge scores or human-vs-LLM agreement statistics are reported**.
+The judge was given the customer message, predicted intent, generated reply, and evaluation rubric. It was instructed not to assume unsupported policies or reward politeness alone.
 
-This is an explicit limitation of the submitted prototype.
+### Human-vs-LLM agreement
 
-If additional time or a suitable hosted inference environment were available, the next step would be to:
+The 50-example human review was compared with the LLM judge scores.
 
-1. Run the same 50 examples through an LLM judge.
-2. Score correctness, groundedness, helpfulness, tone, and overall quality.
-3. Compare LLM scores against the human scores.
-4. Report exact agreement and weighted Cohen's kappa.
-5. Inspect disagreements and refine the rubric.
+| Dimension | Exact Agreement | Within ±1 | Weighted Cohen's κ |
+| --------- | --------------: | --------: | -----------------: |
+| Correctness | 36.0% | 78.0% | 0.461 |
+| Groundedness | 38.0% | 68.0% | 0.336 |
+| Helpfulness | 30.0% | 66.0% | 0.350 |
+| Tone | 46.0% | 88.0% | 0.398 |
+| Overall | 34.0% | 74.0% | 0.408 |
 
----
+For overall quality, the LLM judge achieved **34% exact agreement** and **74% agreement within one score point** with human ratings. The weighted Cohen's κ was **0.408**, indicating moderate agreement.
 
-## 16. Top Failure Modes
+Agreement was strongest for tone and weaker for helpfulness, showing that LLM-judge scores should be treated as an additional evaluation signal rather than a replacement for human review.
 
-The evaluation produced several recurring failure patterns.
+### Important annotation caveat
 
-### Failure Mode 1: Similar message, wrong historical resolution
+The 50-example human review was manually scored, but examples 7–50 used rubric-based scoring suggestions during the review process. Therefore, this should be interpreted as a limited internal agreement check rather than a fully independent blind human annotation study.
 
-TF-IDF retrieval can find a message with similar vocabulary but a different underlying problem.
+The first six examples were explicitly scored by the reviewer.
 
-For example, a delivery-related customer message can retrieve another delivery message whose historical response contains a different carrier, tracking situation, or case-specific instruction.
+### Judge limitations
 
-**Hypothesis:** lexical similarity does not fully represent customer intent or resolution requirements.
-
-**Improvement:** combine intent classification, semantic embeddings, entity extraction, and minimum similarity/confidence thresholds.
-
----
-
-### Failure Mode 2: Historical responses can be stale or case-specific
-
-Historical support replies sometimes contain:
-
-* old promotions,
-* old URLs,
-* specific deadlines,
-* carrier-specific instructions,
-* references to historical campaigns,
-* or actions that cannot safely be assumed for a new customer.
-
-Examples in the evaluation included old contest information, stale support links, and carrier-specific replies.
-
-**Hypothesis:** historical support behavior is evidence of what happened before, not necessarily the current policy.
-
-**Improvement:** add response freshness checks, policy verification, and stronger filtering of time-sensitive responses.
+The LLM judge can still make subjective scoring decisions and may share biases with the generated system. The agreement analysis therefore provides supporting evidence rather than definitive proof of reply quality.
 
 ---
 
-### Failure Mode 3: Minority and unsupported intents are difficult
+## 16. Failure Analysis
 
-Some intents have extremely few golden examples.
+The failure analysis was performed on the 200-example end-to-end evaluation.
+
+The main failure categories were:
+
+| Failure Category | Count |
+| ---------------- | ----: |
+| Correct intent but escalated | 98 |
+| Wrong intent classification | 78 |
+| Minority-intent reliability risk | 14 |
+| Auto-handled unclear request | 9 |
+| Potentially case-specific or stale information | 6 |
+
+These categories can overlap and therefore should not be summed.
+
+### Failure Mode 1: Wrong Intent Classification
+
+Ambiguous customer messages are difficult for a small deterministic taxonomy.
+
+Example:
+
+**Customer:**
+"My account login link is not working."
+
+**Gold:** `account_access`
+
+**Predicted:** `general_unclear`
+
+The keyword classifier did not recognize the account-access meaning reliably.
+
+**Hypothesis:**
+The classifier depends too heavily on explicit keywords and does not understand paraphrases or multilingual expressions well.
+
+---
+
+### Failure Mode 2: Retrieval Selects the Wrong Historical Resolution
+
+A message can be textually similar to several different support cases.
+
+For example, a delivery-related message may retrieve a historical refund response because both contain words such as "order", "problem", or "delivery".
+
+This can result in a response that is grammatically appropriate but operationally wrong.
+
+**Hypothesis:**
+TF-IDF similarity does not understand the underlying support intent. Intent-aware filtering helps, but the taxonomy and retrieval corpus still contain overlapping cases.
+
+---
+
+### Failure Mode 3: Auto-Handling Unclear Requests
+
+Some unclear or negative messages were incorrectly handled automatically.
+
+Example:
+
+**Customer:**
+"Thanks for nothing."
+
+**Gold:** `general_unclear`
+
+**Predicted:** `thank_you`
+
+**Decision:** `AUTO_HANDLE`
+
+**Reply:**
+"Anytime!"
+
+The keyword "thanks" caused the system to treat the message as genuine gratitude even though the sentiment was negative.
+
+**Hypothesis:**
+The `thank_you` rule needs stronger contextual and sentiment checks.
+
+---
+
+### Failure Mode 4: Minority-Intent Reliability
+
+Some intents have extremely few examples in the golden set.
 
 For example:
 
@@ -563,354 +618,194 @@ For example:
 * `account_access`: 4 examples
 * `payment_issue`: 6 examples
 
-The evaluation showed weak performance for several of these categories.
+A single error can significantly change the measured score for these classes.
 
-The taxonomy also does not explicitly represent every Amazon support issue.
-
-**Hypothesis:** the classifier lacks sufficient labelled examples and the taxonomy forces some real-world issues into `general_unclear`.
-
-**Improvement:** expand the golden set, rebalance sampling, and refine the taxonomy using additional data analysis.
+**Hypothesis:**
+The evaluation set needs more balanced sampling before making strong claims about minority-intent performance.
 
 ---
 
-### Failure Mode 4: Multilingual messages
+### Failure Mode 5: Multilingual and Limited-Taxonomy Coverage
 
-The dataset contains customer messages in multiple languages.
+The dataset contains customer messages in multiple languages and many support topics that are not represented by the nine-intent taxonomy.
 
-The prototype's keyword-based classification and TF-IDF retrieval are primarily dependent on English lexical overlap.
+For example, messages involving wrong products, sellers, technical problems, or other Amazon services may be forced into `general_unclear`.
 
-Examples included Spanish, German, French, Portuguese, and Japanese messages.
-
-**Hypothesis:** language mismatch reduces keyword coverage and retrieval similarity.
-
-**Improvement:** use multilingual embeddings or a multilingual LLM classifier/retriever and evaluate each major language separately.
-
----
-
-### Failure Mode 5: Auto-handling can occur with insufficient evidence
-
-Some unclear requests were classified into an actionable intent and automatically handled even though the historical evidence was not strong enough.
-
-A particularly risky pattern is an unclear message being mapped to an intent such as delivery or gratitude and then receiving a direct historical response.
-
-**Hypothesis:** the escalation threshold is not strict enough when classification confidence and retrieval confidence disagree.
-
-**Improvement:** require agreement between intent confidence and retrieval confidence before `AUTO_HANDLE`; otherwise escalate.
+**Hypothesis:**
+A production system would require broader taxonomy coverage and multilingual classification support.
 
 ---
 
 ## 17. What Is Misleading About My Headline Number?
 
-The **66.7% accuracy** of the keyword baseline is the most important number that could be misleading.
+The headline end-to-end intent accuracy is **61.0%**, but this number should not be interpreted as meaning that the support agent correctly understands 61% of all possible customer problems.
 
-The dataset is highly imbalanced, with `general_unclear` representing **103 of 200** golden examples.
+There are several reasons.
 
-A system can therefore obtain a relatively high accuracy while performing poorly on minority intents.
+### 17.1 Class imbalance
 
-This is visible in the macro F1 score of only **35.8%**.
+`general_unclear` represents 103 of the 200 golden examples.
 
-The retrieval results tell a similar story. A **100% retrieval rate** sounds excellent, but only **53.5%** of top-1 retrieved examples aligned with the expected intent.
+Therefore, a system can obtain reasonable accuracy by performing well on the largest class while performing poorly on rare but important intents.
 
-Therefore:
+### 17.2 Small evaluation set
 
-> High accuracy or successful retrieval does not mean that the support agent is reliably resolving customer issues.
+The golden set contains only 200 examples.
 
-The more important questions are:
+Some classes have only one or a few examples, making their individual metrics unstable.
 
-* Does the system handle each intent correctly?
-* Is the retrieved evidence appropriate?
-* Is the response grounded?
-* Does the system escalate uncertain cases?
-* Does performance remain stable on minority and multilingual cases?
+### 17.3 Limited taxonomy
+
+The nine-intent taxonomy intentionally groups many real-world support problems into `general_unclear`.
+
+Therefore, accuracy partly reflects the chosen taxonomy rather than complete understanding of Amazon customer support.
+
+### 17.4 Historical retrieval limitations
+
+Finding a similar historical message does not guarantee that the associated response is correct for the current customer.
+
+### 17.5 Reply quality is lower than intent accuracy
+
+The human review produced an overall average reply-quality score of **2.74/5**.
+
+Therefore, the 61.0% intent accuracy should not be interpreted as 61% successful customer resolutions.
+
+The more honest conclusion is:
+
+> The prototype demonstrates a reproducible support-agent pipeline and provides measurable improvement over a trivial baseline, but the current evidence is not sufficient to claim production-level support automation.
 
 ---
 
 ## 18. What Was Not Built
 
-The following production capabilities were intentionally not built:
+The assignment does not require production deployment, and this project intentionally focuses on the evaluation pipeline.
+
+The following were **not** built:
 
 * production deployment,
-* live Amazon support API integration,
-* real-time policy verification,
 * production authentication,
-* human-agent ticketing integration,
-* persistent customer account state,
-* production-grade multilingual support,
-* a large-scale vector database,
-* automated policy freshness verification,
-* fully automated human-quality annotation,
-* comprehensive adversarial safety testing.
+* live customer-service integration,
+* real-time ticketing integration,
+* human-agent dashboard,
+* production monitoring,
+* automatic model retraining,
+* enterprise-grade observability,
+* multilingual model optimization,
+* production-grade policy verification,
+* real-time Amazon policy validation.
 
-The project focuses on demonstrating the evaluation methodology and a runnable prototype.
+The system is therefore an evaluation-focused prototype.
 
 ---
 
-## 19. What I Would Do With One More Week
+## 19. One More Week: Improvement Plan
 
-With one additional week, I would prioritize the following work.
+With one additional week, I would focus on improving reliability rather than simply increasing the headline accuracy.
 
-### Day 1–2: Improve retrieval
+### Day 1: Improve taxonomy
 
-Replace or complement TF-IDF with multilingual sentence embeddings.
+Add high-value intents such as:
+
+* wrong item,
+* seller issue,
+* technical/device issue,
+* account security,
+* order cancellation,
+* subscription/billing.
+
+Review whether `general_unclear` can be reduced.
+
+### Day 2: Improve classification
+
+Replace keyword-only classification with a stronger model and compare:
+
+* TF-IDF + Logistic Regression,
+* sentence embeddings,
+* few-shot LLM classification.
+
+Use confidence thresholds and allow `general_unclear` when confidence is low.
+
+### Day 3: Improve retrieval
+
+Compare TF-IDF retrieval with embedding-based retrieval.
 
 Use:
 
+* intent filtering,
 * semantic similarity,
-* intent compatibility,
-* language compatibility,
-* recency,
-* response-quality filtering.
+* recency weighting where appropriate,
+* response-quality filtering,
+* duplicate removal.
 
-The retriever should reject evidence when confidence is too low.
-
-### Day 3: Improve classification
-
-Create a stronger classifier using an LLM or transformer-based model.
-
-Require structured output:
-
-```json
-{
-  "intent": "delivery_issue",
-  "confidence": 0.91
-}
-```
-
-Invalid or unsupported intents would fall back to `general_unclear`.
+Evaluate retrieval separately before evaluating reply generation.
 
 ### Day 4: Improve grounded generation
 
-Instead of copying one historical response directly, generate a response using several retrieved examples.
+Use structured evidence objects instead of passing raw historical replies directly.
 
-The generator should:
+The generator should explicitly separate:
 
-* identify common resolution patterns,
-* avoid copying stale links,
-* avoid unsupported commitments,
-* explicitly state when customer-specific action is required.
+* customer problem,
+* historical evidence,
+* safe response content,
+* unsupported claims.
 
-### Day 5: Complete LLM judge
+Add stronger checks for:
 
-Run the 50-example LLM judge evaluation using a practical hosted inference environment.
+* URLs,
+* deadlines,
+* refunds,
+* credits,
+* account-specific actions,
+* tracking/order information.
 
-Calculate:
+### Day 5: Strengthen the LLM judge
 
-* average dimension scores,
-* exact agreement,
-* within-one-point agreement,
-* weighted Cohen's kappa,
-* disagreement examples.
+The current hosted judge is complete, but the agreement study should be strengthened.
 
-### Day 6: Improve escalation
+Next steps:
 
-Introduce explicit confidence thresholds.
+* recruit a second independent human reviewer,
+* blind the reviewers to model outputs where possible,
+* increase the agreement set,
+* adjudicate disagreements,
+* refine the judging rubric.
 
-For example:
+The current 50-example agreement result should therefore be viewed as an initial validation rather than a final benchmark.
 
-```text
-High intent confidence
-        +
-High retrieval confidence
-        +
-Safe historical response
-        |
-        v
-AUTO_HANDLE
-```
+### Day 6: Error-driven iteration
 
-Otherwise:
+Use the failure cases to improve:
 
-```text
-ESCALATE
-```
+* intent rules,
+* retrieval filters,
+* escalation thresholds,
+* multilingual handling,
+* `thank_you` detection.
 
-### Day 7: Expand evaluation
+Then rerun the entire evaluation.
 
-Increase the golden set and deliberately sample:
+### Day 7: Reproducibility and documentation
 
-* minority intents,
-* multilingual messages,
-* ambiguous cases,
-* multi-intent messages,
-* unsupported intents.
+Ensure a clean-machine run can reproduce:
 
-This would make the benchmark more representative.
+* preprocessing,
+* golden-set validation,
+* classification evaluation,
+* retrieval evaluation,
+* reply evaluation,
+* LLM-judge evaluation,
+* agreement metrics.
+
+The README should clearly state which steps require an API key and which steps can run offline.
 
 ---
 
 ## 20. Reproducibility
 
-The repository contains scripts for:
+The repository contains runnable Python scripts for the main stages.
 
-* dataset analysis,
-* golden-set creation,
-* golden-set validation,
-* reference-pair construction,
-* leakage checking,
-* baseline evaluation,
-* retrieval evaluation,
-* end-to-end reply evaluation,
-* failure analysis,
-* human review preparation.
+### Install dependencies
 
-The main evaluation can be reproduced from the prepared project data without rerunning the entire 2.8M-row preprocessing pipeline.
-
-Example commands:
-
-```powershell
-python -m evaluation.leakage_check
-python -m evaluation.evaluate
-python -m evaluation.retrieval_evaluation
-python -m evaluation.reply_evaluation
-python -m evaluation.failure_analysis
-python -m pytest
-```
-
-The repository's `.gitignore` prevents secrets, raw dataset archives, extracted raw data, Python cache files, and generated evaluation outputs from being committed unintentionally.
-
-The raw Kaggle dataset is therefore not required to be stored in GitHub.
-
----
-
-## 21. Testing
-
-The project includes automated tests using `pytest`.
-
-The test suite covers:
-
-* golden-set validation,
-* classification behavior,
-* retrieval behavior,
-* pipeline behavior,
-* escalation logic,
-* configuration-related behavior.
-
-The project previously achieved a passing test suite with:
-
-```text
-17 passed
-```
-
-The tests are intended to catch regressions in the core pipeline.
-
----
-
-## 22. Decision Summary
-
-Important design decisions include:
-
-1. **AmazonHelp was selected** because it has a large and varied support dataset.
-2. **Nine intents were selected** to keep the taxonomy small enough for reliable annotation.
-3. **`general_unclear` was retained** for unsupported and genuinely vague requests.
-4. **Physical damage and missing contents were separated** from delivery problems.
-5. **Primary actionable intent** is used for multi-topic messages.
-6. **Conversation-level splitting** was used to reduce evaluation leakage.
-7. **Golden conversations are excluded from retrieval** during evaluation.
-8. **TF-IDF retrieval** was selected as a simple, reproducible baseline.
-9. **Intent-aware retrieval scoring** was added to improve lexical retrieval.
-10. **Top three historical examples** are retained as evidence.
-11. **Historical responses are treated as evidence rather than guaranteed policy.**
-12. **Conservative escalation** is preferred when evidence is weak.
-13. **URLs and potentially case-specific information are flagged** for review.
-14. **The 200-example golden set was manually reviewed** before evaluation.
-15. **No LLM-judge results were fabricated** when local inference proved impractical.
-
----
-
-## 23. Repository Structure
-
-```text
-hiver-sde-intern/
-│
-├── data/
-│   ├── golden/
-│   │   ├── annotation_guidelines.md
-│   │   ├── golden_set.csv
-│   │   └── sampling_notes.md
-│   │
-│   ├── processed/
-│   │   ├── amazonhelp_customer_sample.csv
-│   │   ├── amazonhelp_reference_pairs.csv
-│   │   ├── brand_statistics.csv
-│   │   └── intent_analysis.csv
-│   │
-│   └── raw/
-│       └── sample.csv
-│
-├── evaluation/
-│   ├── evaluate.py
-│   ├── failure_analysis.py
-│   ├── human_review.py
-│   ├── inspect_retrieval.py
-│   ├── judge.py
-│   ├── leakage_check.py
-│   ├── llm_judge.py
-│   ├── multi_seed_evaluation.py
-│   ├── reply_evaluation.py
-│   └── retrieval_evaluation.py
-│
-├── src/
-│   ├── build_reference_pairs.py
-│   ├── classifier.py
-│   ├── create_golden_set.py
-│   ├── escalation.py
-│   ├── finalize_golden.py
-│   ├── fix_conversation_ids.py
-│   ├── intent_analysis.py
-│   ├── phase0_analysis.py
-│   ├── pipeline.py
-│   ├── reply_generator.py
-│   └── retrieval.py
-│
-├── tests/
-│   └── test_golden.py
-│
-├── DECISION_LOG.md
-├── README.md
-├── REPORT.md
-├── requirements.txt
-├── .env.example
-└── .gitignore
-```
-
----
-
-## 24. Key Results at a Glance
-
-| Component                             |  Main Result |
-| ------------------------------------- | -----------: |
-| Golden set                            | 200 examples |
-| Primary keyword accuracy              |    **66.7%** |
-| Primary keyword macro F1              |    **35.8%** |
-| Majority accuracy                     |    **58.3%** |
-| TF-IDF + Logistic Regression accuracy |    **60.0%** |
-| Retrieval rate                        |   **100.0%** |
-| Average top-1 similarity              |    **0.370** |
-| Retrieval intent alignment            |    **53.5%** |
-| End-to-end intent accuracy            |    **61.0%** |
-| AUTO_HANDLE                           |    **17.5%** |
-| ESCALATE                              |    **82.5%** |
-| Human review overall score            | **2.74 / 5** |
-
----
-
-## 25. Conclusion
-
-This project demonstrates an evaluation-focused AI customer support agent for AmazonHelp.
-
-The prototype shows that:
-
-* a small intent taxonomy can provide a useful starting point,
-* simple keyword rules can outperform basic TF-IDF classification on this small benchmark,
-* historical retrieval can provide useful support evidence,
-* retrieval success alone does not guarantee correct resolution,
-* historical support responses may be stale or case-specific,
-* minority and multilingual cases require additional work,
-* conservative escalation is important for safe automation.
-
-The central lesson from the evaluation is that **customer-support automation should optimize for grounded, appropriate resolution rather than headline classification accuracy**.
-
-The current system is therefore best viewed as a strong prototype and evaluation framework, not as a production-ready autonomous support system.
-
-
-
+```bash
+pip install -r requirements.txt
